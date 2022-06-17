@@ -18,41 +18,63 @@ using Type = Airbyte.Cdk.Models.Type;
 
 namespace Airbyte.Cdk
 {
+    /// <summary>
+    /// Airbyte Entrypoint for Docker
+    /// </summary>
     public class AirbyteEntrypoint
     {
-        static Connector Connector { get; set; }
+        // Cache the json serializer options as internally it's very slow... This improves performance 1000x
+        private static JsonSerializerOptions _jsonSerializerOptions = new()
+        {
+            WriteIndented = false,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            Converters = { new JsonStringEnumConverter() },
+            Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)
+        };
 
-        static Options Options { get; set; }
+        private static Connector Connector { get; set; }
 
-        static AirbyteLogger Logger { get; } = new();
+        private static Options Options { get; set; }
+
+        private static AirbyteLogger Logger { get; } = new();
 
         public static string AirbyteImplPath
         {
             get => Environment.GetEnvironmentVariable("AIRBYTE_IMPL_PATH");
         }
 
-        public static async Task Main(string[] args)
+        /// <summary>
+        /// Main Entrypoint
+        /// </summary>
+        /// <param name="args">Parameters for entrypoint</param>
+        /// <returns>Return code</returns>
+        /// <exception cref="FileNotFoundException"></exception>
+        /// <exception cref="Exception"></exception>
+        public static async Task<int> Main(string[] args)
         {
             Console.OutputEncoding = Encoding.UTF8;
             Console.InputEncoding = Encoding.UTF8;
 
             Parser.Default.ParseArguments<ReadOptions, WriteOptions, InitOptions, PublishOptions>(args)
-                .WithParsed<ReadOptions>(options => Options = options)
-                .WithParsed<WriteOptions>(options => Options = options)
-                .WithParsed<InitOptions>(options => Options = options)
-                .WithParsed<PublishOptions>(options => Options = options)
-                .WithNotParsed(_ => Environment.Exit(1));
+                  .WithParsed<ReadOptions>(options => Options = options)
+                  .WithParsed<WriteOptions>(options => Options = options)
+                  .WithParsed<InitOptions>(options => Options = options)
+                  .WithParsed<PublishOptions>(options => Options = options)
+                  .WithNotParsed(_ => Environment.Exit(1));
 
-            //Check if this is an init
+            // Check if this is an init
             if (Options is InitOptions)
             {
                 await InitCli.Process();
-                return;
+
+                return 0;
             }
+
             if (Options is PublishOptions publishOptions)
             {
                 await Publish.Process(publishOptions);
-                return;
+
+                return 0;
             }
 
             string implModule = Environment.GetEnvironmentVariable("AIRBYTE_IMPL_MODULE");
@@ -60,15 +82,22 @@ namespace Airbyte.Cdk
             if (!File.Exists(AirbyteImplPath))
                 throw new FileNotFoundException($"Cannot find implementation binary {AirbyteImplPath}");
 
-            var implementation = Assembly.LoadFile(AirbyteImplPath).GetTypes().Where(x => typeof(Connector).IsAssignableFrom(x) && !x.IsAbstract && !x.IsInterface)
-                .FirstOrDefault(x => x.Name.Equals(implModule, StringComparison.OrdinalIgnoreCase));
+            var implementation = Assembly.LoadFile(AirbyteImplPath).GetTypes().Where(
+                                             x => typeof(Connector).IsAssignableFrom(x) && !x.IsAbstract &&
+                                                  !x.IsInterface
+                                         )
+                                         .FirstOrDefault(
+                                             x => x.Name.Equals(implModule, StringComparison.OrdinalIgnoreCase)
+                                         );
 
             if (implementation == null)
                 throw new Exception("Source implementation not found!");
+
             if (Activator.CreateInstance(implementation) is not Connector instance)
                 throw new Exception("Implementation provided does not implement Connector class!");
 
             Connector = instance;
+
             try
             {
                 Launch();
@@ -76,20 +105,30 @@ namespace Airbyte.Cdk
             catch (Exception e)
             {
                 Logger.Fatal($"Exception ({e.GetType()}): {e.Message}");
+
+                return 1;
             }
+
+            return 0;
         }
 
         private static Source GetSource()
         {
             if (Connector is not Source source)
-                throw new Exception($"Could not instantiate Source as current type ({Connector.GetType().Name}) is not implementing {nameof(Source)}");
+                throw new Exception(
+                    $"Could not instantiate Source as current type ({Connector.GetType().Name}) is not implementing {nameof(Source)}"
+                );
+
             return source;
         }
 
         private static Destination GetDestination()
         {
             if (Connector is not Destination destination)
-                throw new Exception($"Could not instantiate Destination as current type ({Connector.GetType().Name}) is not implementing {nameof(Destination)}");
+                throw new Exception(
+                    $"Could not instantiate Destination as current type ({Connector.GetType().Name}) is not implementing {nameof(Destination)}"
+                );
+
             return destination;
         }
 
@@ -100,88 +139,147 @@ namespace Airbyte.Cdk
             switch (Options.Command.ToLowerInvariant())
             {
                 case "spec":
-                    ToConsole(new AirbyteMessage
-                    {
-                        Type = Type.SPEC,
-                        Spec = spec
-                    });
+                    ToConsole(
+                        new AirbyteMessage
+                        {
+                            Type = Type.SPEC,
+                            Spec = spec
+                        }
+                    );
+
                     break;
+
                 case "check":
                     var result = Connector.Check(Logger, GetConfig(spec));
-                    if (result.Status == Status.SUCCEEDED) Logger.Info("Check succeeded");
-                    else Logger.Error("Check failed");
-                    ToConsole(new AirbyteMessage
+
+                    if (result.Status == Status.SUCCEEDED)
                     {
-                        Type = Type.CONNECTION_STATUS,
-                        ConnectionStatus = result
-                    });
+                        Logger.Info("Check succeeded");
+                    }
+                    else
+                    {
+                        Logger.Error("Check failed");
+                    }
+
+                    ToConsole(
+                        new AirbyteMessage
+                        {
+                            Type = Type.CONNECTION_STATUS,
+                            ConnectionStatus = result
+                        }
+                    );
+
                     break;
+
                 case "discover":
-                    ToConsole(new AirbyteMessage
-                    {
-                        Type = Type.CATALOG,
-                        Catalog = GetSource().Discover(Logger, GetConfig(spec))
-                    });
+                    ToConsole(
+                        new AirbyteMessage
+                        {
+                            Type = Type.CATALOG,
+                            Catalog = GetSource().Discover(Logger, GetConfig(spec))
+                        }
+                    );
+
                     break;
+
                 case "read":
-                    Channel<AirbyteMessage> readerChannel = Channel.CreateUnbounded<AirbyteMessage>();
+                    Channel<AirbyteMessage> readerChannel = Channel.CreateBounded<AirbyteMessage>(
+                        new BoundedChannelOptions(10)
+                        {
+                            FullMode = BoundedChannelFullMode.Wait
+                        }
+                    );
+
                     var readOptions = Options as ReadOptions;
-                    var readtasks = new[]
-                    {
-                        Task.Run(async () =>
-                        {
-                            var writer = readerChannel.Writer;
-                            try
-                            {
-                                var source = GetSource();
-                                var state = GetState(source, readOptions);
-                                var config = GetConfig(spec);
-                                var catalog = GetCatalog();
-                                await source.Read(Logger, writer, config, catalog, state);
-                            }
-                            catch (Exception e)
-                            {
-                                Logger.Exception(e);
-                                Logger.Fatal("Could not process data due to exception: " + e.Message);
-                            }
 
-                            //Set to complete!
-                            writer.Complete();
-                        }),
-                        Task.Run(async () =>
-                        {
-                            await foreach (var msg in readerChannel.Reader.ReadAllAsync())
-                                ToConsole(msg);
-                        })
+                    var readTasks = new[]
+                    {
+                        Task.Run(
+                            async () =>
+                            {
+                                var writer = readerChannel.Writer;
+
+                                try
+                                {
+                                    var source = GetSource();
+                                    var state = GetState(source, readOptions);
+                                    var config = GetConfig(spec);
+                                    var catalog = GetCatalog();
+                                    await source.Read(Logger, writer, config, catalog, state);
+                                }
+                                catch (Exception e)
+                                {
+                                    Logger.Exception(e);
+                                    Logger.Fatal("Could not process data due to exception: " + e.Message);
+
+                                    throw;
+                                }
+
+                                //Set to complete!
+                                writer.Complete();
+                            }
+                        ),
+                        Task.Run(
+                            async () =>
+                            {
+                                await foreach (var msg in readerChannel.Reader.ReadAllAsync())
+                                {
+                                    ToConsole(msg);
+                                }
+                            }
+                        )
                     };
 
-                    Task.WaitAll(readtasks);
+                    Task.WaitAll(readTasks);
+
                     break;
+
                 case "write":
-                    Channel<AirbyteMessage> writerChannel = Channel.CreateUnbounded<AirbyteMessage>();
-                    var writetasks = new[]
+                    Channel<AirbyteMessage> writerChannel = Channel.CreateBounded<AirbyteMessage>(
+                        new BoundedChannelOptions(10)
+                        {
+                            FullMode = BoundedChannelFullMode.Wait
+                        }
+                    );
+
+                    var writeTasks = new[]
                     {
-                        Task.Run(async () =>
-                        {
-                            var writer = writerChannel.Writer;
-                            while (true) // Loop forever, no state end message?
+                        Task.Run(
+                            async () =>
                             {
-                                var text = await Console.In.ReadLineAsync();
-                                if (TryGetAirbyteMessage(text, out var msg))
-                                    await writer.WriteAsync(msg);
+                                var writer = writerChannel.Writer;
+
+                                while (true) // Loop forever, no state end message?
+                                {
+                                    var text = await Console.In.ReadLineAsync();
+
+                                    if (TryGetAirbyteMessage(text, out var msg))
+                                    {
+                                        await writer.WriteAsync(msg);
+                                    }
+                                }
                             }
-                        }),
-                        Task.Run(async () =>
-                        {
-                            var destination = GetDestination();
-                            await foreach (var msg in writerChannel.Reader.ReadAllAsync())
-                                await destination.Write(Logger, GetConfig(spec),
-                                    JsonSerializer.Deserialize<ConfiguredAirbyteCatalog>(Options.Catalog), msg);
-                        })
+                        ),
+                        Task.Run(
+                            async () =>
+                            {
+                                var destination = GetDestination();
+
+                                await foreach (var msg in writerChannel.Reader.ReadAllAsync())
+                                {
+                                    await destination.Write(
+                                        Logger, GetConfig(spec),
+                                        JsonSerializer.Deserialize<ConfiguredAirbyteCatalog>(Options.Catalog), msg
+                                    );
+                                }
+                            }
+                        )
                     };
 
-                    Task.WaitAll(writetasks);
+                    Task.WaitAll(writeTasks);
+
                     break;
+
                 default:
                     throw new NotImplementedException($"Unexpected command: {Options.Command}");
             }
@@ -190,9 +288,11 @@ namespace Airbyte.Cdk
         private static bool TryGetAirbyteMessage(string input, out AirbyteMessage msg)
         {
             msg = null;
+
             try
             {
                 msg = JsonSerializer.Deserialize<AirbyteMessage>(input);
+
                 return true;
             }
             catch
@@ -205,9 +305,11 @@ namespace Airbyte.Cdk
 
         private static JsonElement GetConfig(ConnectorSpecification spec)
         {
-            var contents = string.IsNullOrWhiteSpace(Options.Config) ? throw new Exception("Config is undefined!")
-                : !TryGetPath(Options.Config, out var filepath) ? throw new FileNotFoundException("Could not find config file: " + filepath)
-                : File.ReadAllText(filepath);
+            var contents = string.IsNullOrWhiteSpace(Options.Config)
+                ? throw new Exception("Config is undefined!")
+                : !TryGetPath(Options.Config, out var filepath)
+                    ? throw new FileNotFoundException("Could not find config file: " + filepath)
+                    : File.ReadAllText(filepath);
 
             if (string.IsNullOrWhiteSpace(contents))
                 throw new Exception("Config file is empty!");
@@ -229,12 +331,15 @@ namespace Airbyte.Cdk
             {
                 Logger.Info($"Found catalog at location: {filepath}");
                 var contents = File.ReadAllText(filepath);
+
                 //Logger.Debug($"Catalog file contents: {contents}");
-                return JsonSerializer.Deserialize<ConfiguredAirbyteCatalog>(contents,
+                return JsonSerializer.Deserialize<ConfiguredAirbyteCatalog>(
+                    contents,
                     new JsonSerializerOptions
                     {
                         Converters = { new JsonStringEnumConverter() }
-                    });
+                    }
+                );
             }
             else throw new FileNotFoundException("Cannot find catalog file: " + filepath);
         }
@@ -248,34 +353,41 @@ namespace Airbyte.Cdk
 
             var contents = source.ReadState(filepath);
             Logger.Debug($"State file contents: {contents.GetRawText()}");
+
             return contents;
         }
 
         public static bool TryGetPath(string filename, out string filepath)
         {
             filepath = string.Empty;
+
             if (string.IsNullOrWhiteSpace(filename))
                 return false;
-            foreach (var path in new[] { Path.Join(Path.GetDirectoryName(AirbyteImplPath), filename), filename, Path.Join(Directory.GetCurrentDirectory(), filename) })
+
+            foreach (var path in new[]
+                     {
+                         Path.Join(Path.GetDirectoryName(AirbyteImplPath), filename), filename,
+                         Path.Join(Directory.GetCurrentDirectory(), filename)
+                     })
                 if (File.Exists(path))
                 {
                     filepath = path;
+
                     break;
                 }
 
             return !string.IsNullOrWhiteSpace(filepath);
         }
 
-        public static void ToConsole<T>(T item) where T : AirbyteMessage =>
-            Console.WriteLine(Encoding.UTF8.GetString(JsonSerializer.SerializeToUtf8Bytes(item, new JsonSerializerOptions
-            {
-                WriteIndented = false,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                Converters = { new JsonStringEnumConverter() },
-                Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)
-            })));
-
+        public static void ToConsole<T>(T item) where T : AirbyteMessage
+        {
+            Console.WriteLine(
+                Encoding.UTF8.GetString(
+                    JsonSerializer.SerializeToUtf8Bytes(
+                        item, _jsonSerializerOptions
+                    )
+                )
+            );
+        }
     }
 }
-
-
