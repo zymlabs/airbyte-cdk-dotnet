@@ -4,11 +4,20 @@ using System.Text.Json.Serialization;
 
 namespace Airbyte.Cdk.Models
 {
+    /// <summary>
+    /// Configured Airbyte Stream
+    /// </summary>
     public class ConfiguredAirbyteStream
     {
+        /// <summary>
+        /// Stream
+        /// </summary>
         [JsonPropertyName("stream")]
         public AirbyteStream? Stream { get; set; }
 
+        /// <summary>
+        /// Sync Mode
+        /// </summary>
         [JsonPropertyName("sync_mode")]
         public SyncMode SyncMode { get; set; }
 
@@ -18,6 +27,9 @@ namespace Airbyte.Cdk.Models
         [JsonPropertyName("cursor_field")]
         public string[]? CursorField { get; set; }
 
+        /// <summary>
+        /// Destination Sync Mode
+        /// </summary>
         [JsonPropertyName("destination_sync_mode")]
         public DestinationSyncMode DestinationSyncMode { get; set; }
 

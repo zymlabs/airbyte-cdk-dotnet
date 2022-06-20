@@ -28,7 +28,7 @@ namespace Airbyte.Cdk.Tests.Sources
             var result = Mock.Object.Check(Logger.Object, "".AsJsonElement());
 
             result.Should().NotBeNull();
-            result.Status.Should().Be(Status.SUCCEEDED);
+            result.Status.Should().Be(Status.Succeeded);
         }
 
         [Fact]
@@ -44,7 +44,7 @@ namespace Airbyte.Cdk.Tests.Sources
             var result = Mock.Object.Check(Logger.Object,"".AsJsonElement());
 
             result.Should().NotBeNull();
-            result.Status.Should().Be(Status.FAILED);
+            result.Status.Should().Be(Status.Failed);
             result.Message.Should().NotBeNullOrWhiteSpace();
             result.Message.Should().Be(exceptionmessage);
         }

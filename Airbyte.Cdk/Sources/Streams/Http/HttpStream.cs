@@ -239,41 +239,41 @@ namespace Airbyte.Cdk.Sources.Streams.Http
         /// Start reading records
         /// </summary>
         public override async Task<long> ReadRecords(AirbyteLogger logger, SyncMode syncMode,
-            ChannelWriter<AirbyteMessage> streamchannel, JsonElement streamstate, long? recordlimit = null,
-            string[] cursorfield = null, Dictionary<string, object> streamslice = null)
+            ChannelWriter<AirbyteMessage> streamChannel, JsonElement streamState, long? recordLimit = null,
+            string[] cursorField = null, Dictionary<string, object> streamSlice = null)
         {
             SyncMode = syncMode;
             Logger = logger;
             bool paginationcompleted = false;
             Dictionary<string, object> nextpagetoken = null;
             long recordcount = 0;
-            bool Limitreached() => recordlimit.HasValue && recordcount >= recordlimit.Value;
+            bool Limitreached() => recordLimit.HasValue && recordcount >= recordLimit.Value;
 
             async Task UpdateState(JsonElement lastrecord)
             {
-                var updatedstate = GetUpdatedState(streamstate, lastrecord);
+                var updatedstate = GetUpdatedState(streamState, lastrecord);
                 Logger.Info($"Setting state of {Name} stream to {updatedstate.GetRawText()}");
-                await streamchannel.WriteAsync(new AirbyteMessage
+                await streamChannel.WriteAsync(new AirbyteMessage
                 {
-                    Type = Type.STATE, State = new AirbyteStateMessage {Data = updatedstate}
+                    Type = Type.State, State = new AirbyteStateMessage {Data = updatedstate}
                 });
-                streamstate = updatedstate;
+                streamState = updatedstate;
             }
 
             while (!paginationcompleted)
             {
-                var requestheaders = RequestHeaders(streamstate, streamslice, nextpagetoken);
-                var path = Path(streamstate, streamslice, nextpagetoken);
-                var parameters = RequestParams(streamstate, streamslice, nextpagetoken);
-                var requestjson = RequestBodyJson(streamstate, streamslice, nextpagetoken);
-                var requestBodyData = RequestBodyData(streamstate, streamslice, nextpagetoken);
+                var requestheaders = RequestHeaders(streamState, streamSlice, nextpagetoken);
+                var path = Path(streamState, streamSlice, nextpagetoken);
+                var parameters = RequestParams(streamState, streamSlice, nextpagetoken);
+                var requestjson = RequestBodyJson(streamState, streamSlice, nextpagetoken);
+                var requestBodyData = RequestBodyData(streamState, streamSlice, nextpagetoken);
                 (IFlurlRequest request, IFlurlResponse response) result = await Send(path, requestheaders, parameters,
                     requestjson, requestBodyData);
                 JsonElement _lastitem = "{}".AsJsonElement();
 
-                foreach (var item in ParseResponse(result.response, streamstate, streamslice, nextpagetoken))
+                foreach (var item in ParseResponse(result.response, streamState, streamSlice, nextpagetoken))
                 {
-                    await streamchannel.WriteAsync(AbstractSource.AsAirbyteMessage(Name, item));
+                    await streamChannel.WriteAsync(AbstractSource.AsAirbyteMessage(Name, item));
                     recordcount++;
 
                     //Check record limit

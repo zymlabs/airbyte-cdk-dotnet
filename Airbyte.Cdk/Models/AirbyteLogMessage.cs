@@ -2,6 +2,9 @@
 
 namespace Airbyte.Cdk.Models
 {
+    /// <summary>
+    /// Airbyte Log Message
+    /// </summary>
     public class AirbyteLogMessage
     {
         /// <summary>

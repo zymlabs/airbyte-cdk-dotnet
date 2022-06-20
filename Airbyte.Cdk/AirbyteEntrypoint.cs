@@ -24,7 +24,7 @@ namespace Airbyte.Cdk
     public class AirbyteEntrypoint
     {
         // Cache the json serializer options as internally it's very slow... This improves performance 1000x
-        private static JsonSerializerOptions _jsonSerializerOptions = new()
+        private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
         {
             WriteIndented = false,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
@@ -142,7 +142,7 @@ namespace Airbyte.Cdk
                     ToConsole(
                         new AirbyteMessage
                         {
-                            Type = Type.SPEC,
+                            Type = Type.Spec,
                             Spec = spec
                         }
                     );
@@ -152,7 +152,7 @@ namespace Airbyte.Cdk
                 case "check":
                     var result = Connector.Check(Logger, GetConfig(spec));
 
-                    if (result.Status == Status.SUCCEEDED)
+                    if (result.Status == Status.Succeeded)
                     {
                         Logger.Info("Check succeeded");
                     }
@@ -164,7 +164,7 @@ namespace Airbyte.Cdk
                     ToConsole(
                         new AirbyteMessage
                         {
-                            Type = Type.CONNECTION_STATUS,
+                            Type = Type.ConnectionStatus,
                             ConnectionStatus = result
                         }
                     );
@@ -175,7 +175,7 @@ namespace Airbyte.Cdk
                     ToConsole(
                         new AirbyteMessage
                         {
-                            Type = Type.CATALOG,
+                            Type = Type.Catalog,
                             Catalog = GetSource().Discover(Logger, GetConfig(spec))
                         }
                     );
@@ -183,7 +183,7 @@ namespace Airbyte.Cdk
                     break;
 
                 case "read":
-                    Channel<AirbyteMessage> readerChannel = Channel.CreateBounded<AirbyteMessage>(
+                    var readerChannel = Channel.CreateBounded<AirbyteMessage>(
                         new BoundedChannelOptions(10)
                         {
                             FullMode = BoundedChannelFullMode.Wait
@@ -235,7 +235,7 @@ namespace Airbyte.Cdk
                     break;
 
                 case "write":
-                    Channel<AirbyteMessage> writerChannel = Channel.CreateBounded<AirbyteMessage>(
+                    var writerChannel = Channel.CreateBounded<AirbyteMessage>(
                         new BoundedChannelOptions(10)
                         {
                             FullMode = BoundedChannelFullMode.Wait
@@ -314,15 +314,15 @@ namespace Airbyte.Cdk
             if (string.IsNullOrWhiteSpace(contents))
                 throw new Exception("Config file is empty!");
 
-            var toreturn = contents.AsJsonElement();
+            var toReturn = contents.AsJsonElement();
 
-            if (!ResourceSchemaLoader.TryCheckConfigAgainstSpecOrExit(toreturn, spec, out var exc))
+            if (!ResourceSchemaLoader.TryCheckConfigAgainstSpecOrExit(toReturn, spec, out var exc))
                 throw new Exception($"Config does not match spec schema: {exc.Message}");
 
             Logger.Info($"Found config file at location: {filepath}");
-            //Logger.Debug($"Config file contents: {toreturn.RootElement}");
+            //Logger.Debug($"Config file contents: {toReturn.RootElement}");
 
-            return toreturn;
+            return toReturn;
         }
 
         private static ConfiguredAirbyteCatalog GetCatalog()
@@ -341,15 +341,16 @@ namespace Airbyte.Cdk
                     }
                 );
             }
-            else throw new FileNotFoundException("Cannot find catalog file: " + filepath);
+
+            throw new FileNotFoundException("Cannot find catalog file: " + filepath);
         }
 
-        private static JsonElement GetState(Source source, ReadOptions readoptions)
+        private static JsonElement GetState(Source source, ReadOptions readOptions)
         {
-            if (TryGetPath(readoptions.State, out var filepath))
+            if (TryGetPath(readOptions.State, out var filepath))
                 Logger.Info($"Found state file at location: {filepath}");
             else
-                Logger.Warn($"Could not find state file, config reported state file location: {readoptions.State}");
+                Logger.Warn($"Could not find state file, config reported state file location: {readOptions.State}");
 
             var contents = source.ReadState(filepath);
             Logger.Debug($"State file contents: {contents.GetRawText()}");
@@ -357,7 +358,7 @@ namespace Airbyte.Cdk
             return contents;
         }
 
-        public static bool TryGetPath(string filename, out string filepath)
+        private static bool TryGetPath(string filename, out string filepath)
         {
             filepath = string.Empty;
 

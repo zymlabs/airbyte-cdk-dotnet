@@ -1,9 +1,21 @@
-﻿namespace Airbyte.Cdk.Models
+﻿using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
+
+namespace Airbyte.Cdk.Models
 {
+    /// <summary>
+    /// Destination Sync Mode
+    /// </summary>
+    [JsonConverter(typeof(JsonStringEnumMemberConverter))] 
     public enum DestinationSyncMode
     {
-        append,
-        overwrite,
-        append_dedup
+        [EnumMember(Value = "append")]
+        Append,
+        
+        [EnumMember(Value = "overwrite")]
+        Overwrite,
+        
+        [EnumMember(Value = "append_dedup")]
+        AppendDedup
     }
 }

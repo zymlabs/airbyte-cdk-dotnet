@@ -50,7 +50,7 @@ namespace Airbyte.Cdk.Sources.Streams
         /// </summary>
         public string Name
         {
-            //TODO: should be converted to PascalCase or is snake case an Airbyte protocol requirement?
+            // TODO: should be converted to PascalCase or is snake case an Airbyte protocol requirement?
             get => (string.IsNullOrWhiteSpace(_givenName) ? GetType().Name : _givenName).ToSnakeCase();
         }
 
@@ -62,11 +62,11 @@ namespace Airbyte.Cdk.Sources.Streams
         /// <summary>
         /// This method should be overridden by subclasses to read records based on the inputs
         /// </summary>
-        public abstract Task<long> ReadRecords(AirbyteLogger logger, SyncMode syncMode, ChannelWriter<AirbyteMessage> streamchannel,
-            JsonElement streamstate,
-            long? recordlimit = null,
-            string[] cursorfield = null,
-            Dictionary<string, object> streamslice = null);
+        public abstract Task<long> ReadRecords(AirbyteLogger logger, SyncMode syncMode, ChannelWriter<AirbyteMessage> streamChannel,
+            JsonElement streamState,
+            long? recordLimit = null,
+            string[] cursorField = null,
+            Dictionary<string, object> streamSlice = null);
 
         /// <summary>
         /// The default implementation of this method looks for a JSONSchema file with the same name as this stream's "name" property.
@@ -84,8 +84,8 @@ namespace Airbyte.Cdk.Sources.Streams
         /// {'name': 'octavia', 'created_at': 20 } then this method would return {'created_at': 20}
         /// to indicate state should be updated to this object.
         /// </summary>
-        public virtual JsonElement GetUpdatedState(JsonElement currentstreamstate,
-            JsonElement latestrecord) => "{}".AsJsonElement();
+        public virtual JsonElement GetUpdatedState(JsonElement currentStreamState,
+            JsonElement latestRecord) => "{}".AsJsonElement();
 
         /// <summary>
         /// Converts the current stream to an Airbyte stream, to determine stream specifications
@@ -113,7 +113,7 @@ namespace Airbyte.Cdk.Sources.Streams
         /// <summary>
         /// Override to define the slices for this stream. See the stream slicing section of the docs for more information.
         /// </summary>
-        public virtual Dictionary<string, object> StreamSlices(SyncMode syncmode, string[] cursorfield,
-            JsonElement streamstate) => new();
+        public virtual Dictionary<string, object> StreamSlices(SyncMode syncMode, string[] cursorField,
+            JsonElement streamState) => new();
     }
 }

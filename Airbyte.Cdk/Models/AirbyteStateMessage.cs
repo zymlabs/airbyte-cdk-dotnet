@@ -3,6 +3,9 @@ using System.Text.Json.Serialization;
 
 namespace Airbyte.Cdk.Models
 {
+    /// <summary>
+    /// Airbyte State Message
+    /// </summary>
     public class AirbyteStateMessage
     {
         /// <summary>

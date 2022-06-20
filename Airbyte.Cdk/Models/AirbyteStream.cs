@@ -5,6 +5,9 @@ using System.Text.Json.Serialization;
 
 namespace Airbyte.Cdk.Models
 {
+    /// <summary>
+    /// Airbyte Stream
+    /// </summary>
     public class AirbyteStream
     {
         /// <summary>
@@ -20,6 +23,9 @@ namespace Airbyte.Cdk.Models
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public JsonElement JsonSchema { get; set; }
 
+        /// <summary>
+        /// Supported sync modes
+        /// </summary>
         [JsonPropertyName("supported_sync_modes")]
         public SyncMode[]? SupportedSyncModes { get; set; }
 

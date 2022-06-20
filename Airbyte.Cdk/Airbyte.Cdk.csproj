@@ -27,6 +27,7 @@
     <PackageReference Include="Handlebars.Net" Version="2.0.10" />
     <PackageReference Include="JsonCons.JsonPath" Version="1.1.0" />
     <PackageReference Include="JsonSchema.Net" Version="1.12.0" />
+    <PackageReference Include="Macross.Json.Extensions" Version="3.0.0" />
     <PackageReference Include="Polly" Version="7.2.2" />
     <PackageReference Include="Spectre.Console" Version="0.43.0" />
   </ItemGroup>

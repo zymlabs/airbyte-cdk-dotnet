@@ -474,21 +474,21 @@ namespace Airbyte.Cdk.Sources.Utils
                 ? func.Invoke()
                 : base.GetJsonSchema();
 
-        public override JsonElement GetUpdatedState(JsonElement currentstreamstate,
-            JsonElement latestrecord) =>
+        public override JsonElement GetUpdatedState(JsonElement currentStreamState,
+            JsonElement latestRecord) =>
             TryGetMethod<Func<JsonElement, JsonElement, JsonElement>>(
                 nameof(GetUpdatedState), out var func)
-                ? func.Invoke(currentstreamstate, latestrecord)
-                : base.GetUpdatedState(currentstreamstate, latestrecord);
+                ? func.Invoke(currentStreamState, latestRecord)
+                : base.GetUpdatedState(currentStreamState, latestRecord);
 
-        public override Task<long> ReadRecords(AirbyteLogger logger, SyncMode syncMode, ChannelWriter<AirbyteMessage> streamchannel,
-            JsonElement streamstate,
-            long? recordlimit = null,
-            string[] cursorfield = null!, Dictionary<string, object> streamslice = null!) =>
+        public override Task<long> ReadRecords(AirbyteLogger logger, SyncMode syncMode, ChannelWriter<AirbyteMessage> streamChannel,
+            JsonElement streamState,
+            long? recordLimit = null,
+            string[] cursorField = null!, Dictionary<string, object> streamSlice = null!) =>
             TryGetMethod<Func<AirbyteLogger, SyncMode, ChannelWriter<AirbyteMessage>, JsonElement, long?, string[],
                 Dictionary<string, object>, Task<long>>>(nameof(ReadRecords), out var func)
-                ? func.Invoke(logger, syncMode, streamchannel, streamstate, recordlimit, cursorfield, streamslice)
-                : base.ReadRecords(logger, syncMode, streamchannel, streamstate, recordlimit, cursorfield, streamslice);
+                ? func.Invoke(logger, syncMode, streamChannel, streamState, recordLimit, cursorField, streamSlice)
+                : base.ReadRecords(logger, syncMode, streamChannel, streamState, recordLimit, cursorField, streamSlice);
 
         public override string RequestBodyData(JsonElement streamstate,
             Dictionary<string, object> streamslice = null!, Dictionary<string, object> nextpagetoken = null!) =>
@@ -518,11 +518,11 @@ namespace Airbyte.Cdk.Sources.Utils
                 ? func.Invoke(streamstate, streamslice, nextpagetoken)
                 : base.RequestParams(streamstate, streamslice, nextpagetoken);
 
-        public override Dictionary<string, object> StreamSlices(SyncMode syncmode,
-            string[] cursorfield, JsonElement streamstate) =>
+        public override Dictionary<string, object> StreamSlices(SyncMode syncMode,
+            string[] cursorField, JsonElement streamState) =>
             TryGetMethod<Func<SyncMode, string[], JsonElement,
                 Dictionary<string, object>>>(nameof(StreamSlices), out var func)
-                ? func.Invoke(syncmode, cursorfield, streamstate)
-                : base.StreamSlices(syncmode, cursorfield, streamstate);
+                ? func.Invoke(syncMode, cursorField, streamState)
+                : base.StreamSlices(syncMode, cursorField, streamState);
     }
 }

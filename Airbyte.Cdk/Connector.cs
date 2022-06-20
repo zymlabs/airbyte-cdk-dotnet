@@ -4,18 +4,22 @@ using Airbyte.Cdk.Models;
 
 namespace Airbyte.Cdk
 {
+    /// <summary>
+    /// Abstract Connector
+    /// </summary>
     public abstract class Connector
     {
         /// <summary>
         /// Persist config in temporary directory to run the Source job
         /// </summary>
         /// <param name="config"></param>
-        /// <param name="tempdir"></param>
+        /// <param name="tempDir"></param>
         /// <returns></returns>
-        public virtual JsonElement Configure(JsonElement config, string tempdir)
+        public virtual JsonElement Configure(JsonElement config, string tempDir)
         {
-            var configpath = Path.Join(tempdir, "config.json");
-            WriteConfig(config, configpath);
+            var configPath = Path.Join(tempDir, "config.json");
+            WriteConfig(config, configPath);
+            
             return config;
         }
 

@@ -1,8 +1,13 @@
 ﻿#nullable enable
+using System;
 using System.Text.Json.Serialization;
 
 namespace Airbyte.Cdk.Models
 {
+    /// <summary>
+    /// An object containing any metadata needed to describe this connector's Oauth flow. Deprecated, switching to advanced_auth instead.
+    /// </summary>
+    [Obsolete("Switching to advanced_auth instead.")]
     public class OAuth2Specification
     {
         /// <summary>

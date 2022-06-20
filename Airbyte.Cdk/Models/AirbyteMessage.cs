@@ -3,6 +3,9 @@ using System.Text.Json.Serialization;
 
 namespace Airbyte.Cdk.Models
 {
+    /// <summary>
+    /// Airbyte Message
+    /// </summary>
     public class AirbyteMessage
     {
         /// <summary>
@@ -12,7 +15,7 @@ namespace Airbyte.Cdk.Models
         public Type Type { get; set; }
 
         /// <summary>
-        /// Log message: any kind of logging you want the platform to know about.
+        /// Log message: Any kind of logging you want the platform to know about.
         /// </summary>
         [JsonPropertyName("log")]
         public AirbyteLogMessage? Log { get; set; }
@@ -36,7 +39,7 @@ namespace Airbyte.Cdk.Models
         public AirbyteRecordMessage? Record { get; set; }
 
         /// <summary>
-        /// schema message: the state. Must be the last message produced. The platform uses this information
+        /// Schema message: The state. Must be the last message produced. The platform uses this information
         /// </summary>
         [JsonPropertyName("state")]
         public AirbyteStateMessage? State { get; set; }

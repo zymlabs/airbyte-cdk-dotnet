@@ -1,8 +1,13 @@
 ﻿#nullable enable
+using System;
 using System.Text.Json.Serialization;
 
 namespace Airbyte.Cdk.Models
 {
+    /// <summary>
+    /// Auth Specification
+    /// </summary>
+    [Obsolete("Switching to advanced_auth instead")]
     public class AuthSpecification
     {
         /// <summary>

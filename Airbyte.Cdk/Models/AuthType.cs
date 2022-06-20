@@ -1,7 +1,15 @@
-﻿namespace Airbyte.Cdk.Models
+﻿using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
+
+namespace Airbyte.Cdk.Models
 {
+    /// <summary>
+    /// Auth Type
+    /// </summary>
+    [JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumMemberConverter))]  // This custom converter was placed in a system namespace.
     public enum AuthType
     {
-        oauth2_0
+        [EnumMember(Value = "oauth2_0")]
+        OAuth2
     }
 }
